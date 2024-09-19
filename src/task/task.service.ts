@@ -1,65 +1,88 @@
 /* eslint-disable prettier/prettier */
+// eslint-disable-next-line prettier/prettier
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable prettier/prettier */
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Task, TaskStatus } from './task.model';
-import { v4 as uuid } from 'uuid';
+import { TaskStatus } from './task-status.enum';
 import { createTaskdto } from './dto/createTask.dto';
 import { getTaskFilter } from './dto/get-tasks-filter.dto';
+import { TaskRepository } from './task.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { promises } from 'dns';
+import { Task } from './task.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class TaskService {
-  private tasks: Task[] = [];
-  getAllTasks(): Task[] {
-    return this.tasks;
-  }
-  getTaskWithFilter(filterdto: getTaskFilter): Task[] {
+  constructor(
+    @InjectRepository(Task)
+    private taskRepository: Repository<Task>, // Inject base repository
+  ) {}
+  // private tasks: Task[] = [];
+  // getAllTasks(): Task[] {
+  //   return this.tasks;
+  // }
+  // getTaskWithFilter(filterdto: getTaskFilter): Task[] {
+  //   const { status, search } = filterdto;
+  //   let tasks = this.getAllTasks();
+  //   if (status) {
+  //     tasks = tasks.filter((task) => task.status === status);
+  //   }
+  //   if (search) {
+  //     tasks = tasks.filter((task) => {
+  //       if (task.title.includes(search) || task.description.includes(search)) {
+  //         return true;
+  //       } else {
+  //         return false;
+  //       }
+  //     });
+  //   }
+  //   return tasks;
+  // }
+  getTasks(filterdto: getTaskFilter): Promise<Task[]> {
     const { status, search } = filterdto;
-    let tasks = this.getAllTasks();
+    const query = this.taskRepository.createQueryBuilder('task');
     if (status) {
-      tasks = tasks.filter((task) => task.status === status);
+      query.andWhere('task.status =:status', { status });
     }
     if (search) {
-      tasks = tasks.filter((task) => {
-        if (task.title.includes(search) || task.description.includes(search)) {
-          return true;
-        } else {
-          return false;
-        }
-      });
+      query.andWhere(
+        'LOWER(task.title) LIKE LOWER(:search) OR LOWER(task.description) LIKE LOWER(:search)',
+        { search: `%${search}%` },
+      );
     }
+    const tasks = query.getMany();
     return tasks;
   }
-  createTask(createTaskdto: createTaskdto) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async createTask(createTaskdto: createTaskdto): Promise<Task> {
     const { title, description } = createTaskdto;
-    const task: Task = {
-      id: uuid(),
+    const task = this.taskRepository.create({
+      // creating the task
       title,
       description,
       status: TaskStatus.OPEN,
-    };
-    this.tasks.push(task);
+    });
+    await this.taskRepository.save(task); // saving it to the repo
     return task;
   }
-  getTaskBYId(id: string) {
-    const task = this.tasks.find((task) => id == task.id);
-    if (!task) {
+  async getTaskById(id: any): Promise<Task> {
+    const found = await this.taskRepository.findOne({ where: { id } });
+    if (!found) {
       throw new NotFoundException(`task with id ${id} is not found`);
     }
-    return task;
+    return found;
   }
-  deleteTask(id: string) {
-    const task = this.tasks.find((task) => id == task.id);
-    if (task) {
-      const index = this.tasks.indexOf(task);
-      this.tasks.splice(index, 1);
-      return { msg: ' task deleted' };
-    } else {
-      return 'not able to delete';
-    }
-  } 
-  updateTaskStatus(id: string, status: TaskStatus) {
-    const task = this.getTaskBYId(id);
+  async deleteTask(id: string) {
+    const result = await this.taskRepository.delete({ id });
+    return { result, msg: 'task deleted🎊' };
+  }
+
+  async updateTaskStatus(id: string, status): Promise<Task> {
+    const task = await this.getTaskById(id);
+    console.log(task);
+    console.log(status);
     task.status = status;
+    await this.taskRepository.save(task);
     return task;
   }
 }

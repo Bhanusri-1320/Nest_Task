@@ -15,13 +15,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { promises } from 'dns';
 import { Task } from './task.entity';
 import { Repository } from 'typeorm';
-import { User } from 'src/auth/user.entity';
+import { User } from '../auth/user.entity';
 
 @Injectable()
 export class TaskService {
   constructor(
     @InjectRepository(Task)
-    private taskRepository: Repository<Task>, // Inject base repository
+    private taskRepository: Repository<Task>,
+    private tasksRepository:TaskRepository, // Inject base repository
   ) {}
   // private tasks: Task[] = [];
   // getAllTasks(): Task[] {
@@ -45,20 +46,7 @@ export class TaskService {
   //   return tasks;
   // }
   getTasks(filterdto: getTaskFilter, user: User): Promise<Task[]> {
-    const { status, search } = filterdto;
-    const query = this.taskRepository.createQueryBuilder('task');
-    query.where({ user });
-    if (status) {
-      query.andWhere('task.status =:status', { status });
-    }
-    if (search) {
-      query.andWhere(
-        '(LOWER(task.title) LIKE LOWER(:search) OR LOWER(task.description) LIKE LOWER(:search))',
-        { search: `%${search}%` },
-      );
-    }
-    const tasks = query.getMany();
-    return tasks;
+   return this.tasksRepository.getTask(filterdto,user)
   }
   async createTask(createTaskdto: createTaskdto, user: User): Promise<Task> {
     const { title, description } = createTaskdto;

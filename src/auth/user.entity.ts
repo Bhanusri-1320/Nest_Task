@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Task } from 'src/task/task.entity';
+import { Task } from '../task/task.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()

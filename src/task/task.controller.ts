@@ -18,8 +18,8 @@ import { createTaskdto } from './dto/createTask.dto';
 import { getTaskFilter } from './dto/get-tasks-filter.dto';
 import { Task } from './task.entity';
 import { AuthGuard } from '@nestjs/passport';
-import { User } from 'src/auth/user.entity';
-import { GetUser } from 'src/auth/get-user.decorator';
+import { User } from '../auth/user.entity';
+import { GetUser } from '../auth/get-user.decorator';
 
 @Controller('task')
 @UseGuards(AuthGuard())
